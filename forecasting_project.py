@@ -144,6 +144,29 @@ def forecast_daily_sales(df):
     test_prophet['yhat'] = forecast.iloc[train_size:]['yhat'].values
     results['Prophet'] = test_prophet
 
+    # 4. Linear Regression (on Trend)
+    print("Training Linear Regression model...")
+    daily_data['index'] = np.arange(len(daily_data))
+    train_lr = daily_data.iloc[:train_size]
+    test_lr = daily_data.iloc[train_size:]
+    lr_model = LinearRegression()
+    lr_model.fit(train_lr[['index']], train_lr['y'])
+    test_lr_res = test_lr.copy()
+    test_lr_res['yhat'] = lr_model.predict(test_lr[['index']])
+    results['LinearRegression'] = test_lr_res
+
+    # 5. ARIMA (Simple)
+    print("Training ARIMA model...")
+    try:
+        arima_model = SARIMAX(train['y'], order=(1, 1, 1), seasonal_order=(1, 1, 1, 7))
+        arima_fit = arima_model.fit(disp=False)
+        arima_forecast = arima_fit.get_forecast(steps=len(test))
+        test_arima = test.copy()
+        test_arima['yhat'] = arima_forecast.predicted_mean.values
+        results['ARIMA'] = test_arima
+    except:
+        print("ARIMA failed to converge, skipping...")
+
     # Evaluate
     metrics = []
     for name, res in results.items():
